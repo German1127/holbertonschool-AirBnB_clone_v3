@@ -1,7 +1,5 @@
 #!/usr/bin/python3
-"""
-Contains the FileStorage class
-"""
+"""Contains the class FileStorage"""
 
 import json
 from models.amenity import Amenity
@@ -55,7 +53,7 @@ class FileStorage:
                 jo = json.load(f)
             for key in jo:
                 self.__objects[key] = classes[jo[key]["__class__"]](**jo[key])
-        except:
+        except IOError:
             pass
 
     def delete(self, obj=None):
@@ -68,3 +66,22 @@ class FileStorage:
     def close(self):
         """call reload() method for deserializing the JSON file to objects"""
         self.reload()
+
+# These two functions are the new methods added into DBStorage class
+# & FileStorage class
+    def get(self, cls, id):
+        """A method to retrieve one object"""
+        if cls is None or id is None:
+            return None
+        else:
+            for value in self.all(cls).values():
+                if value.id == id:
+                    return value
+            return None
+
+    def count(self, cls=None):
+        """A method to count the number of objects in storage"""
+        if cls is None:
+            return len(self.all())
+        else:
+            return len(self.all(cls))
