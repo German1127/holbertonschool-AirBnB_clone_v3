@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+"""
+this file contain a route /status.
+"""
 from api.v1.views import app_views
 from flask import jsonify
 
