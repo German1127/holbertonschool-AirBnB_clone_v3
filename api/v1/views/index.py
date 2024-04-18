@@ -1,29 +1,31 @@
 #!/usr/bin/python3
-"""Runs the index.py file"""
-
-from flask import jsonify
+"""Flask app"""
 from api.v1.views import app_views
 from models import storage
-from models.amenity import Amenity
-from models.city import City
-from models.place import Place
-from models.review import Review
-from models.state import State
-from models.user import User
+from flask import jsonify, request
 
 
 @app_views.route('/status', methods=['GET'])
-def get_status():
-    return jsonify({"status": "OK"})
+def statusRoute():
+    """Status Route"""
+    if request.method == 'GET':
+        return jsonify({"status": "OK"})
 
 
 @app_views.route('/stats')
-def get_counts():
-    return jsonify({
-        'amenities': storage.count(Amenity),
-        'cities': storage.count(City),
-        'places': storage.count(Place),
-        'reviews': storage.count(Review),
-        'states': storage.count(State),
-        'users': storage.count(User)
-        })
+def count():
+    """ Count objects """
+    dictob = {}
+    clss = {
+        "Amenity": "amenities",
+        "Place": "places",
+        "State": "states",
+        "City": "cities",
+        "Review": "reviews",
+        "User": "users"
+    }
+
+    for cls in clss:
+        count = storage.count(cls)
+        dictob[clss.get(cls)] = count
+    return jsonify(dictob)
