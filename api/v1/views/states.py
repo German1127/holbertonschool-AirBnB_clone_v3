@@ -1,76 +1,81 @@
 #!/usr/bin/python3
-"""Creates a view for State objects that handles all default RESTFul API actions"""
+"""App module using Flask"""
 
-
-from models.state import State
 from models import storage
-from models.base_model import BaseModel
+from flask import jsonify
+from models.state import State
 from api.v1.views import app_views
-from flask import request, jsonify, abort
 
 
-@app_views.route('/states', strict_slashes=False)
-def list_all_states():
-    states_list = []
-    for value in storage.all(State).values():
-        states_list.append(value.to_dict())
-    return jsonify(states_list)
+@app_views.route('/states', methods=["GET"], strict_slashes=False)
+def getStates():
+    """GET route to return all States"""
+    all_states = []
+    for states in storage.all('State').values():
+        all_states.append(states.to_dict())
+    return jsonify(all_states)
 
 
-@app_views.route('/states/<state_id>', strict_slashes=False)
-def list_state_by_id(state_id):
-    state = storage.get(State, state_id)
-    not_found_error(state)
-    return jsonify(state.to_dict())
-
-
-@app_views.route('/states/<state_id>', methods=['DELETE'],
-                 strict_slashes=False)
-def delete_state_by_id(state_id):
-    state = storage.get(State, state_id)
-    not_found_error(state)
-    state.delete()
-    storage.save()
-    return jsonify({}), 200
-
-
-@app_views.route('/states', methods=['POST'], strict_slashes=False)
-def create_state():
-    if request.headers.get('Content-Type') != 'application/json':
-        abort(400)
-
-    json_dict = request.get_json()
-    not_json_format(json_dict)
-
-    if 'name' not in json_dict:
-        abort(400, description="Missing name")
-    new_state = State(**json_dict)
-    new_state.save()
-    return jsonify(new_state.to_dict()), 201
-
-
-@app_views.route('/states/<state_id>', methods=['PUT'], strict_slashes=False)
-def update_state(state_id):
-    if request.headers.get('Content-Type') != 'application/json':
-        abort(400)
+@app_views.get('/states/<state_id>')
+def stateId(state_id):
+    """GET route to return one specific State"""
 
     state = storage.get(State, state_id)
-    not_found_error(state)
-    json_dict = request.get_json()
-    not_json_format(json_dict)
-
-    for key, value in json_dict.items():
-        if key not in ["id", "created_at", "updated_at"]:
-            setattr(state, key, value)
-    storage.save()
-    return jsonify(state.to_dict()), 200
-
-
-def not_found_error(state):
     if state is None:
-        abort(404)
+        from flask import abort
+        return abort(404)
+
+    return state.to_dict()
 
 
-def not_json_format(json_dict):
-    if not json_dict:
-        abort(400, description="Not a JSON")
+@app_views.delete('/states/<state_id>')
+def deleteStateId(state_id):
+    """DELETE route to delete a State"""
+    try:
+        obj = storage.get(State, state_id)
+        if obj is None:
+            from flask import abort
+            return abort(404)
+        storage.delete(obj)
+        storage.save()
+        return {}, 200
+    except Exception:
+        from flask import abort
+        return abort(404)
+
+
+@app_views.post('/states/')
+def postState():
+    """Posts a new State"""
+    from flask import request
+    if request.is_json:
+        data = request.get_json()
+        if data.get("name") is None:
+            return "Missing name", 400
+        new_obj = State(**data)
+        storage.new(new_obj)
+        storage.save()
+        return new_obj.to_dict(), 201
+
+    return "Not a JSON", 400
+
+
+@app_views.put('/states/<state_id>')
+def putState(state_id):
+    obj = storage.get(State, state_id)
+
+    if obj is None:
+        from flask import abort
+        return abort(404)
+
+    from flask import request
+    if request.is_json:
+        data = request.get_json()
+        ignore_keys = ['id', 'created_at', 'updated_at']
+        for key, prop in data.items():
+            if key not in ignore_keys:
+                setattr(obj, key, prop)
+        storage.save()
+        return obj.to_dict()
+
+    return "Not a JSON", 400
